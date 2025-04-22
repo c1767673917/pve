@@ -138,13 +138,19 @@ install_pve() {
     
     # 配置PVE源
     log_info "配置PVE源..."
-    if [ "$use_china_mirrors" = true ]; then
-        echo "deb https://mirrors.tuna.tsinghua.edu.cn/proxmox/debian/pve bullseye pve-no-subscription" > /etc/apt/sources.list.d/pve-install-repo.list
-    else
-        echo "deb http://download.proxmox.com/debian/pve bullseye pve-no-subscription" > /etc/apt/sources.list.d/pve-install-repo.list
-    fi
     
-    wget -q -O- "http://download.proxmox.com/debian/proxmox-ve-release-6.x.gpg" | apt-key add -
+    # 使用现代方法设置PVE源和密钥
+    log_info "下载并导入PVE GPG密钥..."
+    # 创建keyrings目录（如果不存在）
+    mkdir -p /usr/share/keyrings/
+    
+    # 下载并导入官方密钥到系统keyring
+    wget -O- "https://enterprise.proxmox.com/debian/proxmox-release-bullseye.gpg" | gpg --dearmor -o /usr/share/keyrings/proxmox-archive-keyring.gpg
+    
+    # 正确配置源，使用signed-by选项指定密钥文件
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] http://download.proxmox.com/debian/pve bullseye pve-no-subscription" > /etc/apt/sources.list.d/pve-install-repo.list
+    
+    # 更新软件包信息
     apt-get update
     
     # 安装PVE
