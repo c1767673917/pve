@@ -38,6 +38,9 @@ check_system() {
         if [ "$VERSION_ID" -lt 8 ]; then
             log_error "系统版本过低，需要Debian 8+"
         fi
+        
+        # 存储Debian版本供后续使用
+        DEBIAN_VERSION=$VERSION_ID
     else
         log_error "不支持的系统，本脚本仅支持Debian系统"
     fi
@@ -147,11 +150,44 @@ install_pve() {
     # 下载并导入官方密钥到系统keyring
     wget -O- "https://enterprise.proxmox.com/debian/proxmox-release-bullseye.gpg" | gpg --dearmor -o /usr/share/keyrings/proxmox-archive-keyring.gpg
     
-    # 正确配置源，使用signed-by选项指定密钥文件
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] http://download.proxmox.com/debian/pve bullseye pve-no-subscription" > /etc/apt/sources.list.d/pve-install-repo.list
+    # 根据Debian版本配置合适的源
+    if [ "$DEBIAN_VERSION" -eq 11 ]; then
+        # Debian 11 (Bullseye) - 使用标准PVE源
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] http://download.proxmox.com/debian/pve bullseye pve-no-subscription" > /etc/apt/sources.list.d/pve-install-repo.list
+    elif [ "$DEBIAN_VERSION" -eq 12 ]; then
+        # Debian 12 (Bookworm) - 需要特殊处理
+        log_info "检测到Debian 12 (Bookworm)，需要额外配置..."
+        
+        # 添加Debian 11软件包源以获取libssl1.1
+        echo "deb [arch=amd64] http://deb.debian.org/debian bullseye main" > /etc/apt/sources.list.d/debian-bullseye.list
+        
+        # 配置PVE源
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] http://download.proxmox.com/debian/pve bullseye pve-no-subscription" > /etc/apt/sources.list.d/pve-install-repo.list
+        
+        # 设置apt偏好，优先使用当前版本
+        cat > /etc/apt/preferences.d/pve-pin-release <<EOF
+Package: *
+Pin: release n=bookworm
+Pin-Priority: 900
+
+Package: *
+Pin: release n=bullseye
+Pin-Priority: 700
+EOF
+    else
+        # 默认情况，尝试使用Bullseye
+        log_info "未知Debian版本，尝试使用Bullseye源..."
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] http://download.proxmox.com/debian/pve bullseye pve-no-subscription" > /etc/apt/sources.list.d/pve-install-repo.list
+    fi
     
     # 更新软件包信息
     apt-get update
+    
+    # 如果是Debian 12，先安装libssl1.1
+    if [ "$DEBIAN_VERSION" -eq 12 ]; then
+        log_info "为Debian 12安装libssl1.1..."
+        apt-get install -y libssl1.1
+    fi
     
     # 安装PVE
     log_info "安装PVE..."
