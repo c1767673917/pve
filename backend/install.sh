@@ -124,14 +124,9 @@ create_swap() {
 install_pve() {
     log_info "开始安装PVE..."
     
-    # 检查是否为中国IP，使用适当的源
-    if ping -c 1 -W 2 www.baidu.com > /dev/null 2>&1; then
-        log_info "检测到中国网络环境，使用国内镜像源..."
-        use_china_mirrors=true
-    else
-        log_info "使用官方源..."
-        use_china_mirrors=false
-    fi
+    # 强制使用国外官方源
+    use_china_mirrors=false
+    log_info "使用官方源..."
     
     # 更新系统
     log_info "更新系统..."

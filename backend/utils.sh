@@ -170,12 +170,16 @@ check_internet() {
 
 # 检查是否在中国网络环境
 check_china_network() {
-    if ping -c 1 -W 2 www.baidu.com > /dev/null 2>&1; then
-        log_info "检测到中国网络环境"
-        return 0
-    else
-        return 1
-    fi
+    # 强制返回false，使用国外镜像源
+    return 1
+    
+    # 原始代码保留但已注释
+    # if ping -c 1 -W 2 www.baidu.com > /dev/null 2>&1; then
+    #     log_info "检测到中国网络环境"
+    #     return 0
+    # else
+    #     return 1
+    # fi
 }
 
 # 检查硬件配置是否满足最低要求
@@ -408,20 +412,20 @@ download_kvm_image() {
             ;;
     esac
     
-    # 使用中国镜像源（如果在中国网络环境）
-    if check_china_network; then
-        case "$image" in
-            debian*)
-                url=${url/cloud.debian.org/mirrors.tuna.tsinghua.edu.cn\/debian-cd}
-                ;;
-            ubuntu*)
-                url=${url/cloud-images.ubuntu.com/mirrors.tuna.tsinghua.edu.cn\/ubuntu-cloud-images}
-                ;;
-        esac
-    fi
-    
     log_info "开始下载镜像: $image"
     log_info "下载地址: $url"
+    
+    # 强制使用国外官方源
+    # if check_china_network; then
+    #     case "$image" in
+    #         debian*)
+    #             url=${url/cloud.debian.org/mirrors.tuna.tsinghua.edu.cn\/debian-cd}
+    #             ;;
+    #         ubuntu*)
+    #             url=${url/cloud-images.ubuntu.com/mirrors.tuna.tsinghua.edu.cn\/ubuntu-cloud-images}
+    #             ;;
+    #     esac
+    # fi
     
     wget -O "$output_file" "$url" || {
         log_error "下载镜像失败"
